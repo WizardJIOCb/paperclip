@@ -52,6 +52,8 @@ describe("locale preference", () => {
 
     expect(i18n.resolvedLanguage).toBe("ru");
     expect(t("app.noCompanies.newCompany")).toBe("Новая компания");
+    expect(t("sidebar.newTask")).toBe("Новая задача");
+    expect(t("sidebar.nav.tasks")).toBe("Задачи");
     expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("ru");
     expect(document.documentElement.lang).toBe("ru");
   });
