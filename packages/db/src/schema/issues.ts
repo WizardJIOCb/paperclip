@@ -17,6 +17,7 @@ import { companies } from "./companies.js";
 import { heartbeatRuns } from "./heartbeat_runs.js";
 import { projectWorkspaces } from "./project_workspaces.js";
 import { executionWorkspaces } from "./execution_workspaces.js";
+import { issueBoardColumns } from "./issue_board_columns.js";
 import type { SourceTrustMetadata } from "@paperclipai/shared";
 import type { IssueUnblockDescriptor } from "@paperclipai/shared";
 
@@ -32,6 +33,7 @@ export const issues = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     status: text("status").notNull().default("backlog"),
+    boardColumnId: uuid("board_column_id").references(() => issueBoardColumns.id, { onDelete: "set null" }),
     workMode: text("work_mode").notNull().default("standard"),
     harnessKind: text("harness_kind"),
     priority: text("priority").notNull().default("medium"),
@@ -78,6 +80,7 @@ export const issues = pgTable(
   },
   (table) => ({
     companyStatusIdx: index("issues_company_status_idx").on(table.companyId, table.status),
+    boardColumnIdx: index("issues_company_board_column_idx").on(table.companyId, table.boardColumnId),
     companyHarnessKindIdx: index("issues_company_harness_kind_idx").on(table.companyId, table.harnessKind),
     assigneeStatusIdx: index("issues_company_assignee_status_idx").on(
       table.companyId,

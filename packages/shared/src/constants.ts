@@ -201,6 +201,16 @@ export const ISSUE_STATUSES = [
 ] as const;
 export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 
+export const ISSUE_BOARD_COLUMN_COLORS = [
+  "gray",
+  "yellow",
+  "blue",
+  "purple",
+  "red",
+  "green",
+] as const;
+export type IssueBoardColumnColor = (typeof ISSUE_BOARD_COLUMN_COLORS)[number];
+
 export const INBOX_MINE_ISSUE_STATUSES = [
   "backlog",
   "todo",

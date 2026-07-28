@@ -2,7 +2,7 @@
 
 import { createRoot, type Root } from "react-dom/client";
 import { flushSync } from "react-dom";
-import type { Issue, IssueStatus } from "@paperclipai/shared";
+import type { Issue, IssueBoardColumn, IssueStatus } from "@paperclipai/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getKanbanColumnTone, KanbanBoard, resolveKanbanTargetStatus } from "./KanbanBoard";
 
@@ -230,5 +230,31 @@ describe("KanbanBoard", () => {
     expect(resolveKanbanTargetStatus("done", issues)).toBe("done");
     expect(resolveKanbanTargetStatus("issue-blocked-2", issues)).toBe("blocked");
     expect(resolveKanbanTargetStatus("missing", issues)).toBeNull();
+  });
+
+  it("renders tasks in their custom column and exposes the add-column action", () => {
+    const issue = createIssue(1, "todo");
+    issue.boardColumnId = "column-qa";
+    const customColumns: IssueBoardColumn[] = [{
+      id: "column-qa",
+      companyId: "company-1",
+      name: "Ready for QA",
+      color: "purple",
+      status: "todo",
+      position: 0,
+      taskCount: 1,
+      createdAt: new Date("2026-05-05T00:00:00.000Z"),
+      updatedAt: new Date("2026-05-05T00:00:00.000Z"),
+    }];
+    const onManageColumns = vi.fn();
+    const { container } = renderBoard({ issues: [issue], customColumns, onManageColumns });
+
+    expect(container.textContent).toContain("Ready for QA");
+    expect(container.textContent).toContain("Issue 1");
+    const addButton = Array.from(container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Add column"),
+    );
+    act(() => addButton?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(onManageColumns).toHaveBeenCalledOnce();
   });
 });

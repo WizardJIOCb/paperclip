@@ -7,6 +7,7 @@ import { useCompany } from "../context/CompanyContext";
 import { Link, useNavigate } from "@/lib/router";
 import { executionWorkspacesApi } from "../api/execution-workspaces";
 import { issuesApi } from "../api/issues";
+import { issueBoardColumnsApi } from "../api/issue-board-columns";
 import { authApi } from "../api/auth";
 import { instanceSettingsApi } from "../api/instanceSettings";
 import { queryKeys } from "../lib/queryKeys";
@@ -84,6 +85,7 @@ import { workflowSort } from "../lib/workflow-sort";
 import { isSuccessfulRunHandoffRequired } from "../lib/successful-run-handoff";
 import { deriveOriginatingActor, ISSUE_STATUSES, type Issue, type IssueStatus, type Project } from "@paperclipai/shared";
 import { Badge } from "@/components/ui/badge";
+import { BoardColumnManagerDialog } from "./BoardColumnManagerDialog";
 const ISSUE_SEARCH_DEBOUNCE_MS = 250;
 const ISSUE_SEARCH_RESULT_LIMIT = 200;
 const ISSUE_BOARD_COLUMN_RESULT_LIMIT = 200;
@@ -681,6 +683,7 @@ export function IssuesList({
   }, []);
   const { selectedCompanyId } = useCompany();
   const { openNewIssue } = useDialogActions();
+  const [boardColumnManagerOpen, setBoardColumnManagerOpen] = useState(false);
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
     queryFn: () => authApi.getSession(),
@@ -1135,6 +1138,11 @@ export function IssuesList({
     queryKey: queryKeys.issues.labels(selectedCompanyId!),
     queryFn: () => issuesApi.listLabels(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+  });
+  const { data: boardColumns = [] } = useQuery({
+    queryKey: queryKeys.issues.boardColumns(selectedCompanyId!),
+    queryFn: () => issueBoardColumnsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId && viewState.viewMode === "board",
   });
 
   const activeFilterCount = countActiveIssueFilters(viewState, enableRoutineVisibilityFilter);
@@ -1658,6 +1666,17 @@ export function IssuesList({
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
+                className="h-8 shrink-0 gap-1.5 px-2"
+                onClick={() => setBoardColumnManagerOpen(true)}
+                title="Add, reorder, or delete board columns"
+              >
+                <SquareKanban className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">Board columns</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
                 size="icon"
                 className={cn("h-8 w-8 shrink-0", boardCompactCards && "bg-accent")}
                 onClick={() => updateView({ boardCardDensity: boardCompactCards ? "comfortable" : "compact" })}
@@ -1730,14 +1749,16 @@ export function IssuesList({
             </>
           )}
 
-          <IssueColumnPicker
-            availableColumns={availableIssueColumns}
-            visibleColumnSet={visibleIssueColumnSet}
-            onToggleColumn={toggleIssueColumn}
-            onResetColumns={() => setIssueColumns(DEFAULT_INBOX_ISSUE_COLUMNS)}
-            title="Choose which task columns stay visible"
-            iconOnly
-          />
+          {viewState.viewMode === "list" ? (
+            <IssueColumnPicker
+              availableColumns={availableIssueColumns}
+              visibleColumnSet={visibleIssueColumnSet}
+              onToggleColumn={toggleIssueColumn}
+              onResetColumns={() => setIssueColumns(DEFAULT_INBOX_ISSUE_COLUMNS)}
+              title="Choose which task columns stay visible"
+              iconOnly
+            />
+          ) : null}
 
           <IssueFiltersPopover
             state={viewState}
@@ -1860,6 +1881,7 @@ export function IssuesList({
       {viewState.viewMode === "board" ? (
         <KanbanBoard
           issues={filtered}
+          customColumns={boardColumns}
           agents={agents}
           liveIssueIds={liveIssueIds}
           compactCards={boardCompactCards}
@@ -1867,6 +1889,7 @@ export function IssuesList({
           initialVisibleCount={viewState.boardColumnPageSize}
           revealIncrement={viewState.boardColumnPageSize}
           onUpdateIssue={onUpdateIssue}
+          onManageColumns={() => setBoardColumnManagerOpen(true)}
         />
       ) : (
         <>
@@ -2271,6 +2294,14 @@ export function IssuesList({
           )}
         </>
       )}
+      {selectedCompanyId && boardColumnManagerOpen ? (
+        <BoardColumnManagerDialog
+          companyId={selectedCompanyId}
+          columns={boardColumns}
+          open={boardColumnManagerOpen}
+          onOpenChange={setBoardColumnManagerOpen}
+        />
+      ) : null}
     </div>
   );
 }

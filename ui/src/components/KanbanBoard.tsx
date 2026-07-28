@@ -20,8 +20,13 @@ import {
 import { StatusIcon } from "./StatusIcon";
 import { PriorityIcon } from "./PriorityIcon";
 import { Identity } from "./Identity";
-import type { Issue, IssueStatus } from "@paperclipai/shared";
-import { AlertTriangle } from "lucide-react";
+import type {
+  Issue,
+  IssueBoardColumn,
+  IssueBoardColumnColor,
+  IssueStatus,
+} from "@paperclipai/shared";
+import { AlertTriangle, Plus } from "lucide-react";
 import { isSuccessfulRunHandoffRequired } from "../lib/successful-run-handoff";
 import { collectSubtreeLiveCounts } from "../lib/liveIssueIds";
 import { cn } from "../lib/utils";
@@ -129,6 +134,19 @@ export function getKanbanColumnTone(status: IssueStatus) {
   return kanbanColumnTones[status] ?? defaultKanbanColumnTone;
 }
 
+const customColumnToneStatus: Record<IssueBoardColumnColor, IssueStatus> = {
+  gray: "backlog",
+  yellow: "todo",
+  blue: "in_progress",
+  purple: "in_review",
+  red: "blocked",
+  green: "done",
+};
+
+function getCustomKanbanColumnTone(color: IssueBoardColumnColor) {
+  return getKanbanColumnTone(customColumnToneStatus[color]);
+}
+
 function statusLabel(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -147,6 +165,7 @@ interface Agent {
 
 interface KanbanBoardProps {
   issues: Issue[];
+  customColumns?: IssueBoardColumn[];
   agents?: Agent[];
   liveIssueIds?: Set<string>;
   compactCards?: boolean;
@@ -154,12 +173,24 @@ interface KanbanBoardProps {
   initialVisibleCount?: number;
   revealIncrement?: number;
   onUpdateIssue: (id: string, data: Record<string, unknown>) => void;
+  onManageColumns?: () => void;
+}
+
+interface KanbanLane {
+  id: string;
+  name: string;
+  status: IssueStatus;
+  customColumnId: string | null;
+  color: IssueBoardColumnColor | null;
 }
 
 /* ── Droppable Column ── */
 
 function KanbanColumn({
+  laneId,
+  name,
   status,
+  color,
   issues,
   agents,
   liveIssueIds,
@@ -170,7 +201,10 @@ function KanbanColumn({
   revealIncrement,
   onShowMore,
 }: {
+  laneId: string;
+  name: string;
   status: IssueStatus;
+  color?: IssueBoardColumnColor | null;
   issues: Issue[];
   agents?: Agent[];
   liveIssueIds?: Set<string>;
@@ -181,13 +215,13 @@ function KanbanColumn({
   revealIncrement: number;
   onShowMore: () => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const { setNodeRef, isOver } = useDroppable({ id: laneId });
 
   const isEmpty = issues.length === 0;
   const visibleIssues = collapsed ? [] : issues.slice(0, visibleCount);
   const hiddenCount = Math.max(issues.length - visibleIssues.length, 0);
   const nextRevealCount = Math.min(revealIncrement, hiddenCount);
-  const tone = getKanbanColumnTone(status);
+  const tone = color ? getCustomKanbanColumnTone(color) : getKanbanColumnTone(status);
 
   if (collapsed) {
     return (
@@ -198,11 +232,11 @@ function KanbanColumn({
           tone.rail,
           isOver && tone.railOver,
         )}
-        title={`${statusLabel(status)}: ${issues.length}`}
+        title={`${name}: ${issues.length}`}
       >
         <StatusIcon status={status} />
         <span className={cn("mt-2 [writing-mode:vertical-rl] rotate-180 text-(length:--text-nano) font-semibold uppercase tracking-wide", tone.header)}>
-          {statusLabel(status)}
+          {name}
         </span>
         <Badge variant="ghost" className={cn("mt-auto bg-background px-1.5 text-(length:--text-nano) tabular-nums", tone.header)}>
           {issues.length}
@@ -216,7 +250,7 @@ function KanbanColumn({
       <div className="flex items-center gap-2 px-3 py-2 mb-1">
         <StatusIcon status={status} />
         <span className={cn("text-xs font-semibold uppercase tracking-wide", tone.header)}>
-          {statusLabel(status)}
+          {name}
         </span>
         <span className={cn("ml-auto text-xs tabular-nums", tone.count)}>
           {issues.length}
@@ -382,6 +416,7 @@ function KanbanCard({
 
 export function KanbanBoard({
   issues,
+  customColumns = [],
   agents,
   liveIssueIds,
   compactCards = false,
@@ -389,6 +424,7 @@ export function KanbanBoard({
   initialVisibleCount = KANBAN_COLUMN_INITIAL_VISIBLE_LIMIT,
   revealIncrement = KANBAN_COLUMN_REVEAL_INCREMENT,
   onUpdateIssue,
+  onManageColumns,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const paginationKey = `${initialVisibleCount}:${revealIncrement}`;
@@ -396,25 +432,51 @@ export function KanbanBoard({
     paginationKey: string;
     counts: Record<string, number>;
   }>({ paginationKey, counts: {} });
-  const visibleCountByStatus = visibleState.paginationKey === paginationKey ? visibleState.counts : {};
+  const visibleCountByLane = visibleState.paginationKey === paginationKey ? visibleState.counts : {};
   const collapsedStatusSet = useMemo(() => new Set(collapsedStatuses), [collapsedStatuses]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  const lanes = useMemo<KanbanLane[]>(() => {
+    const orderedCustomColumns = [...customColumns].sort(
+      (a, b) => a.position - b.position || a.createdAt.toString().localeCompare(b.createdAt.toString()) || a.id.localeCompare(b.id),
+    );
+    return boardStatuses.flatMap((status) => [
+      { id: status, name: statusLabel(status), status, customColumnId: null, color: null },
+      ...orderedCustomColumns
+        .filter((column) => column.status === status)
+        .map((column) => ({
+          id: `column:${column.id}`,
+          name: column.name,
+          status,
+          customColumnId: column.id,
+          color: column.color,
+        })),
+    ]);
+  }, [customColumns]);
+
+  const laneById = useMemo(() => new Map(lanes.map((lane) => [lane.id, lane])), [lanes]);
+  const customLaneByColumnId = useMemo(
+    () => new Map(lanes.filter((lane) => lane.customColumnId).map((lane) => [lane.customColumnId!, lane])),
+    [lanes],
+  );
+
+  const issueLane = (issue: Issue) => {
+    const customLane = issue.boardColumnId ? customLaneByColumnId.get(issue.boardColumnId) : null;
+    return customLane?.status === issue.status ? customLane : laneById.get(issue.status) ?? null;
+  };
+
   const columnIssues = useMemo(() => {
-    const grouped: Record<IssueStatus, Issue[]> = {} as Record<IssueStatus, Issue[]>;
-    for (const status of boardStatuses) {
-      grouped[status] = [];
-    }
+    const grouped = new Map(lanes.map((lane) => [lane.id, [] as Issue[]]));
     for (const issue of issues) {
-      if (grouped[issue.status]) {
-        grouped[issue.status].push(issue);
-      }
+      const customLane = issue.boardColumnId ? customLaneByColumnId.get(issue.boardColumnId) : null;
+      const lane = customLane?.status === issue.status ? customLane : laneById.get(issue.status);
+      if (lane) grouped.get(lane.id)?.push(issue);
     }
     return grouped;
-  }, [issues]);
+  }, [customLaneByColumnId, issues, laneById, lanes]);
 
   const activeIssue = useMemo(
     () => (activeId ? issues.find((i) => i.id === activeId) : null),
@@ -439,13 +501,15 @@ export function KanbanBoard({
     const issue = issues.find((i) => i.id === issueId);
     if (!issue) return;
 
-    // Determine target status: the "over" could be a column id (status string)
-    // or another card's id. Find which column the "over" belongs to.
-    const targetStatus = resolveKanbanTargetStatus(over.id as string, issues);
-
-    if (targetStatus && targetStatus !== issue.status) {
-      onUpdateIssue(issueId, { status: targetStatus });
-    }
+    const overId = over.id as string;
+    const overIssue = issues.find((candidate) => candidate.id === overId);
+    const targetLane = laneById.get(overId) ?? (overIssue ? issueLane(overIssue) : null);
+    const currentLane = issueLane(issue);
+    if (!targetLane || targetLane.id === currentLane?.id) return;
+    onUpdateIssue(issueId, {
+      status: targetLane.status,
+      boardColumnId: targetLane.customColumnId,
+    });
   }
 
   function handleDragOver(_event: DragOverEvent) {
@@ -460,11 +524,16 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
-        {boardStatuses.map((status) => (
+        {lanes.map((lane) => {
+          const laneIssues = columnIssues.get(lane.id) ?? [];
+          return (
           <KanbanColumn
-            key={status}
-            status={status}
-            issues={columnIssues[status] ?? []}
+            key={lane.id}
+            laneId={lane.id}
+            name={lane.name}
+            status={lane.status}
+            color={lane.color}
+            issues={laneIssues}
             agents={agents}
             liveIssueIds={liveIssueIds}
             subtreeLiveCounts={subtreeLiveCounts}
@@ -472,8 +541,8 @@ export function KanbanBoard({
             // Compact mode (any lane explicitly collapsed) also collapses
             // empty lanes to the same labeled rail, so an empty In Progress
             // reads like the other rails instead of a lone expanded column.
-            collapsed={collapsedStatusSet.has(status) || (collapsedStatusSet.size > 0 && columnIssues[status].length === 0)}
-            visibleCount={visibleCountByStatus[status] ?? initialVisibleCount}
+            collapsed={collapsedStatusSet.has(lane.status) || (collapsedStatusSet.size > 0 && laneIssues.length === 0)}
+            visibleCount={visibleCountByLane[lane.id] ?? initialVisibleCount}
             revealIncrement={revealIncrement}
             onShowMore={() => {
               setVisibleState((current) => {
@@ -482,13 +551,24 @@ export function KanbanBoard({
                   paginationKey,
                   counts: {
                     ...counts,
-                    [status]: (counts[status] ?? initialVisibleCount) + revealIncrement,
+                    [lane.id]: (counts[lane.id] ?? initialVisibleCount) + revealIncrement,
                   },
                 };
               });
             }}
           />
-        ))}
+          );
+        })}
+        {onManageColumns ? (
+          <button
+            type="button"
+            className="flex min-h-(--sz-120px) min-w-(--sz-260px) w-(--sz-260px) shrink-0 items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted/10 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/30 hover:text-foreground"
+            onClick={onManageColumns}
+          >
+            <Plus className="size-4" />
+            Add column
+          </button>
+        ) : null}
       </div>
       <DragOverlay>
         {activeIssue ? (
