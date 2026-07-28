@@ -36,6 +36,11 @@ import {
   restoreIssueDocumentRevisionSchema,
   upsertIssueFeedbackVoteSchema,
   upsertIssueWatchdogSchema,
+  createIssueBoardColumnSchema,
+  updateIssueBoardColumnSchema,
+  reorderIssueBoardColumnsSchema,
+  deleteIssueBoardColumnSchema,
+  setIssueBoardColumnVisibilitySchema,
   // Project
   createProjectSchema,
   updateProjectSchema,
@@ -767,6 +772,11 @@ const BOARD_ONLY_OPERATIONS = new Set([
   "POST /api/issues/{id}/interactions/{interactionId}/accept",
   "POST /api/issues/{id}/interactions/{interactionId}/reject",
   "POST /api/issues/{id}/interactions/{interactionId}/respond",
+  "POST /api/companies/{companyId}/issue-board-columns",
+  "PATCH /api/issue-board-columns/{id}",
+  "PUT /api/companies/{companyId}/issue-board-columns/order",
+  "PUT /api/issue-board-columns/{id}/visibility",
+  "DELETE /api/issue-board-columns/{id}",
   "GET /api/companies/{companyId}/tools/gallery",
   "POST /api/companies/{companyId}/tools/apps/connect",
   "POST /api/companies/{companyId}/tools/apps/{connectionId}/finish",
@@ -880,6 +890,7 @@ const CREATED_OPERATIONS = new Set([
   "POST /api/issues/{id}/low-trust/promotions",
   "POST /api/issues/{id}/approvals",
   "POST /api/companies/{companyId}/issues",
+  "POST /api/companies/{companyId}/issue-board-columns",
   "POST /api/issues/{id}/children",
   "POST /api/issues/{id}/interactions",
   "POST /api/issues/{id}/comments",
@@ -1944,6 +1955,75 @@ registry.registerPath({
 });
 
 // ─── Issues ──────────────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/api/companies/{companyId}/issue-board-columns",
+  tags: ["issues"],
+  summary: "List issue board columns",
+  request: { params: z.object({ companyId: z.string() }) },
+  responses: { 200: r.ok(), 401: r.unauthorized },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/companies/{companyId}/issue-board-columns",
+  tags: ["issues"],
+  summary: "Create an issue board column",
+  request: {
+    params: z.object({ companyId: z.string() }),
+    body: jsonBody(createIssueBoardColumnSchema),
+  },
+  responses: { 200: r.ok(), 400: r.badRequest, 401: r.unauthorized },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/api/issue-board-columns/{id}",
+  tags: ["issues"],
+  summary: "Update an issue board column",
+  request: {
+    params: z.object({ id: z.string() }),
+    body: jsonBody(updateIssueBoardColumnSchema),
+  },
+  responses: { 200: r.ok(), 400: r.badRequest, 401: r.unauthorized, 404: r.notFound },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/api/companies/{companyId}/issue-board-columns/order",
+  tags: ["issues"],
+  summary: "Reorder issue board columns",
+  request: {
+    params: z.object({ companyId: z.string() }),
+    body: jsonBody(reorderIssueBoardColumnsSchema),
+  },
+  responses: { 200: r.ok(), 400: r.badRequest, 401: r.unauthorized },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/api/issue-board-columns/{id}/visibility",
+  tags: ["issues"],
+  summary: "Set issue board column visibility",
+  request: {
+    params: z.object({ id: z.string() }),
+    body: jsonBody(setIssueBoardColumnVisibilitySchema),
+  },
+  responses: { 200: r.ok(), 400: r.badRequest, 401: r.unauthorized, 404: r.notFound },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/api/issue-board-columns/{id}",
+  tags: ["issues"],
+  summary: "Delete an issue board column",
+  request: {
+    params: z.object({ id: z.string() }),
+    body: jsonBody(deleteIssueBoardColumnSchema),
+  },
+  responses: { 200: r.ok(), 400: r.badRequest, 401: r.unauthorized, 404: r.notFound },
+});
 
 registry.registerPath({
   method: "get",
