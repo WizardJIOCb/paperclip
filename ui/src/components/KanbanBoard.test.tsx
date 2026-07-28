@@ -242,12 +242,14 @@ describe("KanbanBoard", () => {
       color: "purple",
       status: "todo",
       position: 0,
+      isSystem: false,
+      hidden: false,
       taskCount: 1,
       createdAt: new Date("2026-05-05T00:00:00.000Z"),
       updatedAt: new Date("2026-05-05T00:00:00.000Z"),
     }];
     const onManageColumns = vi.fn();
-    const { container } = renderBoard({ issues: [issue], customColumns, onManageColumns });
+    const { container } = renderBoard({ issues: [issue], boardColumns: customColumns, onManageColumns });
 
     expect(container.textContent).toContain("Ready for QA");
     expect(container.textContent).toContain("Issue 1");
@@ -256,5 +258,42 @@ describe("KanbanBoard", () => {
     );
     act(() => addButton?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
     expect(onManageColumns).toHaveBeenCalledOnce();
+  });
+
+  it("uses configured system names, colors, order, and visibility", () => {
+    const createdAt = new Date("2026-05-05T00:00:00.000Z");
+    const columns: IssueBoardColumn[] = [
+      {
+        id: "system-blocked",
+        companyId: "company-1",
+        name: "Waiting on client",
+        color: "yellow",
+        status: "blocked",
+        position: 0,
+        isSystem: true,
+        hidden: false,
+        taskCount: 1,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      {
+        id: "system-todo",
+        companyId: "company-1",
+        name: "Todo",
+        color: "blue",
+        status: "todo",
+        position: 1,
+        isSystem: true,
+        hidden: true,
+        taskCount: 0,
+        createdAt,
+        updatedAt: createdAt,
+      },
+    ];
+    const { container } = renderBoard({ issues: createIssues(1, "blocked"), boardColumns: columns });
+
+    expect(container.textContent).toContain("Waiting on client");
+    expect(container.textContent).not.toContain("Todo");
+    expect(container.querySelector(".bg-amber-50\\/45")).toBeTruthy();
   });
 });

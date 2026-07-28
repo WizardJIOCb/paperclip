@@ -32,3 +32,10 @@ export const deleteIssueBoardColumnSchema = z.object({
 }).strict();
 
 export type DeleteIssueBoardColumn = z.infer<typeof deleteIssueBoardColumnSchema>;
+
+export const setIssueBoardColumnVisibilitySchema = z.object({
+  hidden: z.boolean(),
+  destinationColumnId: z.string().uuid().nullable().optional().default(null),
+}).strict();
+
+export type SetIssueBoardColumnVisibility = z.infer<typeof setIssueBoardColumnVisibilitySchema>;

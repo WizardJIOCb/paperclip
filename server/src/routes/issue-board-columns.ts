@@ -4,6 +4,7 @@ import {
   createIssueBoardColumnSchema,
   deleteIssueBoardColumnSchema,
   reorderIssueBoardColumnsSchema,
+  setIssueBoardColumnVisibilitySchema,
   updateIssueBoardColumnSchema,
 } from "@paperclipai/shared";
 import { validate } from "../middleware/validate.js";
@@ -97,6 +98,41 @@ export function issueBoardColumnRoutes(db: Db) {
         details: { columnIds: req.body.columnIds },
       });
       res.json(columns);
+    },
+  );
+
+  router.put(
+    "/issue-board-columns/:id/visibility",
+    validate(setIssueBoardColumnVisibilitySchema),
+    async (req, res) => {
+      const id = req.params.id as string;
+      const existing = await getAccessibleResource(req, res, svc.getById(id), "Board column not found");
+      if (!existing) return;
+      assertBoard(req);
+      const result = await svc.setVisibility(id, req.body.hidden, req.body.destinationColumnId ?? null);
+      if (!result) {
+        res.status(404).json({ error: "Board column not found" });
+        return;
+      }
+      const actor = getActorInfo(req);
+      await logActivity(db, {
+        companyId: existing.companyId,
+        actorType: actor.actorType,
+        actorId: actor.actorId,
+        agentId: actor.agentId,
+        runId: actor.runId,
+        agentApiKeyId: actor.agentApiKeyId,
+        action: result.column.hidden ? "issue_board_column.hidden" : "issue_board_column.restored",
+        entityType: "issue_board_column",
+        entityId: id,
+        details: {
+          name: result.column.name,
+          status: result.column.status,
+          movedTaskCount: result.movedTaskCount,
+          destinationColumnId: result.destinationColumnId,
+        },
+      });
+      res.json(result);
     },
   );
 

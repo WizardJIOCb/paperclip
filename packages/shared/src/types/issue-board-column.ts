@@ -7,9 +7,17 @@ export interface IssueBoardColumn {
   color: IssueBoardColumnColor;
   status: IssueStatus;
   position: number;
+  isSystem: boolean;
+  hidden: boolean;
   taskCount: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface SetIssueBoardColumnVisibilityResult {
+  column: IssueBoardColumn;
+  movedTaskCount: number;
+  destinationColumnId: string | null;
 }
 
 export interface DeleteIssueBoardColumnResult {

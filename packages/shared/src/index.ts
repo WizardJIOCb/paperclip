@@ -1408,17 +1408,23 @@ export type {
 } from "./types/cloud-upstream.js";
 
 export type { ServerGitInfo, ServerGitLocalChanges, ServerInfoSnapshot } from "./types/server-info.js";
-export type { IssueBoardColumn, DeleteIssueBoardColumnResult } from "./types/issue-board-column.js";
+export type {
+  IssueBoardColumn,
+  DeleteIssueBoardColumnResult,
+  SetIssueBoardColumnVisibilityResult,
+} from "./types/issue-board-column.js";
 
 export {
   createIssueBoardColumnSchema,
   updateIssueBoardColumnSchema,
   reorderIssueBoardColumnsSchema,
   deleteIssueBoardColumnSchema,
+  setIssueBoardColumnVisibilitySchema,
   type CreateIssueBoardColumn,
   type UpdateIssueBoardColumn,
   type ReorderIssueBoardColumns,
   type DeleteIssueBoardColumn,
+  type SetIssueBoardColumnVisibility,
 } from "./validators/issue-board-column.js";
 
 export {

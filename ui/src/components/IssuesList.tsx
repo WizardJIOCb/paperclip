@@ -1881,7 +1881,7 @@ export function IssuesList({
       {viewState.viewMode === "board" ? (
         <KanbanBoard
           issues={filtered}
-          customColumns={boardColumns}
+          boardColumns={boardColumns}
           agents={agents}
           liveIssueIds={liveIssueIds}
           compactCards={boardCompactCards}

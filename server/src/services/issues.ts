@@ -6272,7 +6272,7 @@ export function issueService(db: Db) {
       }
       if (issueData.boardColumnId) {
         const column = await db
-          .select({ status: issueBoardColumns.status })
+          .select({ status: issueBoardColumns.status, isSystem: issueBoardColumns.isSystem })
           .from(issueBoardColumns)
           .where(and(
             eq(issueBoardColumns.id, issueData.boardColumnId),
@@ -6280,6 +6280,7 @@ export function issueService(db: Db) {
           ))
           .then((rows) => rows[0] ?? null);
         if (!column) throw unprocessable("Board column not found");
+        if (column.isSystem) throw unprocessable("System columns cannot be assigned directly");
         if (column.status !== issueData.status) {
           throw unprocessable("Board column does not match the issue system status");
         }
@@ -6616,14 +6617,15 @@ export function issueService(db: Db) {
       if (issueData.boardColumnId) {
         const nextStatus = issueData.status ?? existing.status;
         const column = await dbOrTx
-          .select({ status: issueBoardColumns.status })
+          .select({ status: issueBoardColumns.status, isSystem: issueBoardColumns.isSystem })
           .from(issueBoardColumns)
           .where(and(
             eq(issueBoardColumns.id, issueData.boardColumnId),
             eq(issueBoardColumns.companyId, existing.companyId),
           ))
-          .then((rows: Array<{ status: string }>) => rows[0] ?? null);
+          .then((rows: Array<{ status: string; isSystem: boolean }>) => rows[0] ?? null);
         if (!column) throw unprocessable("Board column not found");
+        if (column.isSystem) throw unprocessable("System columns cannot be assigned directly");
         if (column.status !== nextStatus) {
           throw unprocessable("Board column does not match the issue system status");
         }

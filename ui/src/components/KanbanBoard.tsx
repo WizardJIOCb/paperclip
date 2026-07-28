@@ -165,7 +165,7 @@ interface Agent {
 
 interface KanbanBoardProps {
   issues: Issue[];
-  customColumns?: IssueBoardColumn[];
+  boardColumns?: IssueBoardColumn[];
   agents?: Agent[];
   liveIssueIds?: Set<string>;
   compactCards?: boolean;
@@ -416,7 +416,7 @@ function KanbanCard({
 
 export function KanbanBoard({
   issues,
-  customColumns = [],
+  boardColumns = [],
   agents,
   liveIssueIds,
   compactCards = false,
@@ -440,22 +440,33 @@ export function KanbanBoard({
   );
 
   const lanes = useMemo<KanbanLane[]>(() => {
-    const orderedCustomColumns = [...customColumns].sort(
+    const orderedColumns = [...boardColumns].sort(
       (a, b) => a.position - b.position || a.createdAt.toString().localeCompare(b.createdAt.toString()) || a.id.localeCompare(b.id),
     );
-    return boardStatuses.flatMap((status) => [
-      { id: status, name: statusLabel(status), status, customColumnId: null, color: null },
-      ...orderedCustomColumns
-        .filter((column) => column.status === status)
-        .map((column) => ({
-          id: `column:${column.id}`,
-          name: column.name,
-          status,
-          customColumnId: column.id,
-          color: column.color,
-        })),
-    ]);
-  }, [customColumns]);
+    if (!orderedColumns.some((column) => column.isSystem)) {
+      return boardStatuses.flatMap((status) => [
+        { id: status, name: statusLabel(status), status, customColumnId: null, color: null },
+        ...orderedColumns
+          .filter((column) => column.status === status)
+          .map((column) => ({
+            id: `column:${column.id}`,
+            name: column.name,
+            status,
+            customColumnId: column.id,
+            color: column.color,
+          })),
+      ]);
+    }
+    return orderedColumns
+      .filter((column) => !column.hidden)
+      .map((column) => ({
+        id: column.isSystem ? column.status : `column:${column.id}`,
+        name: column.name,
+        status: column.status,
+        customColumnId: column.isSystem ? null : column.id,
+        color: column.color,
+      }));
+  }, [boardColumns]);
 
   const laneById = useMemo(() => new Map(lanes.map((lane) => [lane.id, lane])), [lanes]);
   const customLaneByColumnId = useMemo(
