@@ -5,5 +5,100 @@
       "description": "Anza kwa kuunda kampuni.",
       "newCompany": "Kampuni Mpya"
     }
+  },
+  "sidebar": {
+    "openSearch": "Open search",
+    "keepExpanded": "Keep sidebar expanded",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "newTask": "New Task",
+    "sections": {
+      "work": "Work",
+      "company": "Company"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "inbox": "Inbox",
+      "unreadBadge": "unread",
+      "decisions": "Decisions",
+      "decisionsBadge": "decisions",
+      "conferenceRoom": "Conference Room",
+      "tasks": "Tasks",
+      "cases": "Cases",
+      "betaBadge": "beta",
+      "routines": "Routines",
+      "pipelines": "Pipelines",
+      "goals": "Goals",
+      "artifacts": "Artifacts",
+      "skills": "Skills",
+      "workspaces": "Workspaces",
+      "projects": "Projects",
+      "org": "Org",
+      "apps": "Apps",
+      "timeline": "Timeline",
+      "costs": "Costs",
+      "activity": "Activity",
+      "settings": "Settings"
+    }
+  },
+  "auth": {
+    "loading": "Loading…",
+    "brandName": "Paperclip",
+    "signIn": {
+      "title": "Sign in to Paperclip",
+      "subtitle": "Use your email and password to access this instance.",
+      "submit": "Sign In",
+      "promptSwitch": "Need an account?",
+      "switchAction": "Create one"
+    },
+    "signUp": {
+      "title": "Create your Paperclip account",
+      "subtitle": "Create an account for this instance. Email confirmation is not required in v1.",
+      "submit": "Create Account",
+      "promptSwitch": "Already have an account?",
+      "switchAction": "Sign in"
+    },
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "password": "Password"
+    },
+    "submitting": "Working…",
+    "error": {
+      "requiredFields": "Please fill in all required fields.",
+      "authenticationFailed": "Authentication failed"
+    }
+  },
+  "account": {
+    "boardFallback": "Board",
+    "signedIn": "Signed in",
+    "localBoard": "Local workspace board",
+    "badgeAccount": "Account",
+    "badgeLocal": "Local",
+    "openMenu": "Open account menu",
+    "version": "Paperclip v{{version}}",
+    "actions": {
+      "viewProfile": {
+        "label": "View profile",
+        "description": "Open your activity, task, and usage ledger."
+      },
+      "editProfile": {
+        "label": "Edit profile",
+        "description": "Update your display name and avatar."
+      },
+      "documentation": {
+        "label": "Documentation",
+        "description": "Open Paperclip docs in a new tab."
+      },
+      "feedback": {
+        "label": "Feedback",
+        "description": "Share feedback or report an issue."
+      }
+    },
+    "signOut": {
+      "label": "Sign out",
+      "pending": "Signing out...",
+      "description": "End this browser session."
+    }
   }
 }

@@ -5,5 +5,100 @@
       "description": "Начните с создания компании.",
       "newCompany": "Новая компания"
     }
+  },
+  "sidebar": {
+    "openSearch": "Открыть поиск",
+    "keepExpanded": "Оставить боковую панель развёрнутой",
+    "expand": "Развернуть боковую панель",
+    "collapse": "Свернуть боковую панель",
+    "newTask": "Новая задача",
+    "sections": {
+      "work": "Работа",
+      "company": "Компания"
+    },
+    "nav": {
+      "dashboard": "Обзор",
+      "inbox": "Входящие",
+      "unreadBadge": "непрочитанных",
+      "decisions": "Решения",
+      "decisionsBadge": "решений",
+      "conferenceRoom": "Переговорная",
+      "tasks": "Задачи",
+      "cases": "Кейсы",
+      "betaBadge": "бета",
+      "routines": "Регламенты",
+      "pipelines": "Процессы",
+      "goals": "Цели",
+      "artifacts": "Материалы",
+      "skills": "Навыки",
+      "workspaces": "Рабочие области",
+      "projects": "Проекты",
+      "org": "Структура",
+      "apps": "Приложения",
+      "timeline": "Хронология",
+      "costs": "Расходы",
+      "activity": "Активность",
+      "settings": "Настройки"
+    }
+  },
+  "auth": {
+    "loading": "Загрузка…",
+    "brandName": "Paperclip",
+    "signIn": {
+      "title": "Войти в Paperclip",
+      "subtitle": "Используйте электронную почту и пароль для входа.",
+      "submit": "Войти",
+      "promptSwitch": "Нет аккаунта?",
+      "switchAction": "Создать"
+    },
+    "signUp": {
+      "title": "Создать аккаунт Paperclip",
+      "subtitle": "Создайте аккаунт для этого сервера. В версии v1 подтверждение почты не требуется.",
+      "submit": "Создать аккаунт",
+      "promptSwitch": "Уже есть аккаунт?",
+      "switchAction": "Войти"
+    },
+    "fields": {
+      "name": "Имя",
+      "email": "Электронная почта",
+      "password": "Пароль"
+    },
+    "submitting": "Подождите…",
+    "error": {
+      "requiredFields": "Заполните все обязательные поля.",
+      "authenticationFailed": "Не удалось войти"
+    }
+  },
+  "account": {
+    "boardFallback": "Совет",
+    "signedIn": "Выполнен вход",
+    "localBoard": "Локальная панель управления",
+    "badgeAccount": "Аккаунт",
+    "badgeLocal": "Локально",
+    "openMenu": "Открыть меню аккаунта",
+    "version": "Paperclip v{{version}}",
+    "actions": {
+      "viewProfile": {
+        "label": "Открыть профиль",
+        "description": "Просмотреть активность, задачи и расход ресурсов."
+      },
+      "editProfile": {
+        "label": "Редактировать профиль",
+        "description": "Изменить отображаемое имя и аватар."
+      },
+      "documentation": {
+        "label": "Документация",
+        "description": "Открыть документацию Paperclip в новой вкладке."
+      },
+      "feedback": {
+        "label": "Обратная связь",
+        "description": "Отправить отзыв или сообщить о проблеме."
+      }
+    },
+    "signOut": {
+      "label": "Выйти",
+      "pending": "Выход...",
+      "description": "Завершить сеанс в этом браузере."
+    }
   }
 }
