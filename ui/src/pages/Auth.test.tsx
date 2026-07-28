@@ -176,6 +176,24 @@ describe("AuthPage", () => {
     });
   });
 
+  it("updates auth copy reactively when the locale changes", async () => {
+    const { root } = await mount();
+
+    await act(async () => {
+      await setLocale("ru");
+    });
+    await flushReact();
+
+    expect(container.textContent).toContain("Войти в Paperclip");
+    expect(container.textContent).toContain("Электронная почта");
+    expect(container.textContent).toContain("Нет аккаунта?");
+    expect(container.querySelector('button[title="русский (ru)"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("renders auth errors in an assertive alert region referenced by the inputs", async () => {
     const { root } = await mount();
 

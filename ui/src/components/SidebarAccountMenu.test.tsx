@@ -221,4 +221,42 @@ describe("SidebarAccountMenu", () => {
       root.unmount();
     });
   });
+
+  it("updates account actions reactively when the locale changes", async () => {
+    const root = createRoot(container);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    await act(async () => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <SidebarAccountMenu deploymentMode="authenticated" version="1.2.3" />
+        </QueryClientProvider>,
+      );
+    });
+    await flushReact();
+
+    await act(async () => {
+      await setLocale("ru");
+    });
+    await flushReact();
+
+    const trigger = container.querySelector('button[aria-label="Открыть меню аккаунта"]');
+    expect(trigger).not.toBeNull();
+
+    await act(async () => {
+      trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flushReact();
+
+    expect(document.body.textContent).toContain("Открыть профиль");
+    expect(document.body.textContent).toContain("Документация");
+    expect(document.body.textContent).toContain("Обратная связь");
+    expect(document.body.textContent).toContain("Выйти");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
 });
