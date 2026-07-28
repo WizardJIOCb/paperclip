@@ -18,6 +18,7 @@ import {
   routineRuns,
   executionWorkspaces,
   issueApprovals,
+  issueBoardColumns,
   issueAttachments,
   issueCreateIdempotencyKeys,
   issueInboxArchives,
@@ -2563,6 +2564,7 @@ const issueListSelect = {
     END
   `,
   status: issues.status,
+  boardColumnId: issues.boardColumnId,
   workMode: issues.workMode,
   harnessKind: issues.harnessKind,
   priority: issues.priority,
@@ -6268,6 +6270,21 @@ export function issueService(db: Db) {
       if (data.status === "in_progress" && !data.assigneeAgentId && !data.assigneeUserId) {
         throw unprocessable("in_progress issues require an assignee");
       }
+      if (issueData.boardColumnId) {
+        const column = await db
+          .select({ status: issueBoardColumns.status, isSystem: issueBoardColumns.isSystem })
+          .from(issueBoardColumns)
+          .where(and(
+            eq(issueBoardColumns.id, issueData.boardColumnId),
+            eq(issueBoardColumns.companyId, companyId),
+          ))
+          .then((rows) => rows[0] ?? null);
+        if (!column) throw unprocessable("Board column not found");
+        if (column.isSystem) throw unprocessable("System columns cannot be assigned directly");
+        if (column.status !== issueData.status) {
+          throw unprocessable("Board column does not match the issue system status");
+        }
+      }
       return db.transaction(async (tx) => {
         const idempotencyKey = rawIdempotencyKey?.trim() || null;
         const normalizedTitle = normalizeCreateIssueTitle(issueData.title);
@@ -6597,10 +6614,35 @@ export function issueService(db: Db) {
         assertTransition(existing.status, issueData.status);
       }
 
+      if (issueData.boardColumnId) {
+        const nextStatus = issueData.status ?? existing.status;
+        const column = await dbOrTx
+          .select({ status: issueBoardColumns.status, isSystem: issueBoardColumns.isSystem })
+          .from(issueBoardColumns)
+          .where(and(
+            eq(issueBoardColumns.id, issueData.boardColumnId),
+            eq(issueBoardColumns.companyId, existing.companyId),
+          ))
+          .then((rows: Array<{ status: string; isSystem: boolean }>) => rows[0] ?? null);
+        if (!column) throw unprocessable("Board column not found");
+        if (column.isSystem) throw unprocessable("System columns cannot be assigned directly");
+        if (column.status !== nextStatus) {
+          throw unprocessable("Board column does not match the issue system status");
+        }
+      }
+
       const patch: Partial<typeof issues.$inferInsert> = {
         ...issueData,
         updatedAt: new Date(),
       };
+      if (
+        issueData.boardColumnId === undefined
+        && issueData.status !== undefined
+        && issueData.status !== existing.status
+        && existing.boardColumnId
+      ) {
+        patch.boardColumnId = null;
+      }
       if (existing.status !== "blocked" && issueData.status === "blocked") {
         patch.blockedTransitionAt = patch.updatedAt;
         patch.blockedOwnerNotifiedAt = null;

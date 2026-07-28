@@ -720,6 +720,7 @@ export interface Issue {
   title: string;
   description: string | null;
   status: IssueStatus;
+  boardColumnId?: string | null;
   workMode: IssueWorkMode;
   priority: IssuePriority;
   assigneeAgentId: string | null;
@@ -803,6 +804,7 @@ export type CompactIssue = Pick<
   | "title"
   | "description"
   | "status"
+  | "boardColumnId"
   | "workMode"
   | "priority"
   | "assigneeAgentId"

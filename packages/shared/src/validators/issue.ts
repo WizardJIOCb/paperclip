@@ -437,6 +437,7 @@ const createIssueBaseSchema = z.object({
   title: z.string().min(1),
   description: multilineTextSchema.optional().nullable(),
   status: z.enum(ISSUE_STATUSES),
+  boardColumnId: z.string().uuid().optional().nullable(),
   workMode: z.enum(ISSUE_WORK_MODES).optional().default("standard"),
   harnessKind: z.enum(ISSUE_HARNESS_KINDS).optional().nullable(),
   priority: z.enum(ISSUE_PRIORITIES).optional().default("medium"),

@@ -658,6 +658,7 @@ export type {
   IssueWatchdogStatus,
   IssueWatchdogSummary,
 } from "./issue.js";
+export type { IssueBoardColumn, DeleteIssueBoardColumnResult } from "./issue-board-column.js";
 export type {
   IssueTreeControlPreview,
   IssueTreeHold,

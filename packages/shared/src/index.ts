@@ -178,6 +178,7 @@ export {
   AGENT_ICON_NAMES,
   PROJECT_ICON_NAMES,
   ISSUE_STATUSES,
+  ISSUE_BOARD_COLUMN_COLORS,
   INBOX_MINE_ISSUE_STATUSES,
   INBOX_MINE_ISSUE_STATUS_FILTER,
   ISSUE_PRIORITIES,
@@ -365,6 +366,7 @@ export {
   type AgentIconName,
   type ProjectIconName,
   type IssueStatus,
+  type IssueBoardColumnColor,
   type IssuePriority,
   type IssueWorkMode,
   type IssueHarnessKind,
@@ -1406,6 +1408,24 @@ export type {
 } from "./types/cloud-upstream.js";
 
 export type { ServerGitInfo, ServerGitLocalChanges, ServerInfoSnapshot } from "./types/server-info.js";
+export type {
+  IssueBoardColumn,
+  DeleteIssueBoardColumnResult,
+  SetIssueBoardColumnVisibilityResult,
+} from "./types/issue-board-column.js";
+
+export {
+  createIssueBoardColumnSchema,
+  updateIssueBoardColumnSchema,
+  reorderIssueBoardColumnsSchema,
+  deleteIssueBoardColumnSchema,
+  setIssueBoardColumnVisibilitySchema,
+  type CreateIssueBoardColumn,
+  type UpdateIssueBoardColumn,
+  type ReorderIssueBoardColumns,
+  type DeleteIssueBoardColumn,
+  type SetIssueBoardColumnVisibility,
+} from "./validators/issue-board-column.js";
 
 export {
   getClosedIsolatedExecutionWorkspaceMessage,

@@ -7020,6 +7020,7 @@ export function issueRoutes(
   router.post("/companies/:companyId/issues", applyCreateIssueStatusDefault, validate(createIssueSchema), async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
+    if (req.body.boardColumnId !== undefined) assertBoard(req);
     if (isSkillTestScopedActor(req)) {
       res.status(403).json({
         error: "Skill-test run tokens cannot create issues.",
@@ -7703,6 +7704,7 @@ export function issueRoutes(
     const id = req.params.id as string;
     const existing = await getAccessibleResource(req, res, svc.getById(id), "Issue not found");
     if (!existing) return;
+    if (req.body.boardColumnId !== undefined) assertBoard(req);
     assertNoAgentHostWorkspaceCommandMutation(req, collectIssueWorkspaceCommandPaths(req.body));
     if (!(await assertAgentIssueMutationAllowed(req, res, existing))) return;
     if (!(await assertCheapRecoveryIssueAssigneeProfileAllowed(req, res, existing, req.body))) return;

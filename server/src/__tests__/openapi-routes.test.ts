@@ -39,6 +39,7 @@ const apiPrefixes: Record<string, string> = {
   "instance-database-backups.ts": "/api",
   "instance-settings.ts": "/api",
   "issues.ts": "/api",
+  "issue-board-columns.ts": "/api",
   "issue-tree-control.ts": "/api",
   "llms.ts": "/api",
   "openapi.ts": "/api",
@@ -189,6 +190,9 @@ describe("openapi routes", () => {
     expect(res.body.paths["/api/companies/{companyId}/folders"].post.responses["201"]).toBeDefined();
     expect(res.body.paths["/api/companies/{companyId}/folders/items/move"].post.summary).toBe(
       "Move an item into or out of a folder",
+    );
+    expect(res.body.paths["/api/companies/{companyId}/issue-board-columns"].get.summary).toBe(
+      "List issue board columns",
     );
     expect(JSON.stringify(res.body.paths["/api/tool-gateway/tools"].get)).not.toContain("sessionToken");
     expect(JSON.stringify(res.body.paths["/api/tool-gateway/tools/call"].post)).not.toContain("sessionToken");

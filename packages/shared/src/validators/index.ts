@@ -457,6 +457,17 @@ export {
 } from "./issue.js";
 
 export {
+  createIssueBoardColumnSchema,
+  updateIssueBoardColumnSchema,
+  reorderIssueBoardColumnsSchema,
+  deleteIssueBoardColumnSchema,
+  type CreateIssueBoardColumn,
+  type UpdateIssueBoardColumn,
+  type ReorderIssueBoardColumns,
+  type DeleteIssueBoardColumn,
+} from "./issue-board-column.js";
+
+export {
   COMPANY_SEARCH_EXTRACT_DEFAULT_LIMIT,
   COMPANY_SEARCH_EXTRACT_DEFAULT_MATCHES_PER_ISSUE,
   COMPANY_SEARCH_EXTRACT_MAX_LIMIT,
