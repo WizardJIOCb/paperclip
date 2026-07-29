@@ -736,6 +736,73 @@ describe("agent issue mutation checkout ownership", () => {
     }));
   });
 
+  it("lets a company user claim an unassigned issue by moving it to in_progress", async () => {
+    mockIssueService.getById.mockResolvedValue(makeIssue({
+      status: "todo",
+      assigneeAgentId: null,
+      assigneeUserId: null,
+    }));
+    mockIssueService.update.mockImplementation(async (_id: string, patch: Record<string, unknown>) => ({
+      ...makeIssue({ status: "todo", assigneeAgentId: null, assigneeUserId: null }),
+      ...patch,
+    }));
+    mockAccessService.decide.mockImplementation(async (input: { action: string }) => ({
+      allowed: input.action !== "tasks:assign",
+      action: input.action,
+      reason: input.action === "tasks:assign" ? "deny_missing_grant" : "allow_test_default",
+      explanation: input.action === "tasks:assign" ? "Missing permission." : "Allowed by test default.",
+    }));
+
+    const res = await request(await createApp(boardActor()))
+      .patch(`/api/issues/${issueId}`)
+      .send({ status: "in_progress" });
+
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(mockIssueService.update).toHaveBeenCalledWith(
+      issueId,
+      expect.objectContaining({
+        status: "in_progress",
+        assigneeUserId: "board-user",
+        actorUserId: "board-user",
+      }),
+    );
+    expect(mockAccessService.decide).not.toHaveBeenCalledWith(expect.objectContaining({
+      action: "tasks:assign",
+    }));
+    expect(mockLogActivity).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        action: "issue.updated",
+        details: expect.objectContaining({
+          status: "in_progress",
+          assigneeUserId: "board-user",
+        }),
+      }),
+    );
+  });
+
+  it("still requires assignment permission when a user moves work to someone else", async () => {
+    mockIssueService.getById.mockResolvedValue(makeIssue({
+      status: "todo",
+      assigneeAgentId: null,
+      assigneeUserId: null,
+    }));
+    mockAccessService.decide.mockImplementation(async (input: { action: string }) => ({
+      allowed: input.action !== "tasks:assign",
+      action: input.action,
+      reason: input.action === "tasks:assign" ? "deny_missing_grant" : "allow_test_default",
+      explanation: input.action === "tasks:assign" ? "Missing permission." : "Allowed by test default.",
+    }));
+
+    const res = await request(await createApp(boardActor()))
+      .patch(`/api/issues/${issueId}`)
+      .send({ status: "in_progress", assigneeUserId: "another-user" });
+
+    expect(res.status, JSON.stringify(res.body)).toBe(403);
+    expect(res.body.error).toBe("Missing permission.");
+    expect(mockIssueService.update).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["patch", (app: express.Express) => request(app).patch(`/api/issues/${issueId}`).send({ title: "Blocked" })],
     ["delete", (app: express.Express) => request(app).delete(`/api/issues/${issueId}`)],

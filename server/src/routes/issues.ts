@@ -7730,6 +7730,20 @@ export function issueRoutes(
       hiddenAt: hiddenAtRaw,
       ...updateFields
     } = req.body;
+    const implicitlyClaimedByUserId =
+      updateFields.status === "in_progress" &&
+      existing.assigneeAgentId === null &&
+      existing.assigneeUserId === null &&
+      normalizedAssigneeAgentId === undefined &&
+      req.body.assigneeUserId === undefined &&
+      req.actor.type === "board" &&
+      typeof req.actor.userId === "string" &&
+      req.actor.userId.trim().length > 0
+        ? req.actor.userId
+        : null;
+    if (implicitlyClaimedByUserId) {
+      updateFields.assigneeUserId = implicitlyClaimedByUserId;
+    }
     const shouldCancelActiveRunForCancelledStatus =
       existing.status !== "cancelled" && updateFields.status === "cancelled";
     if (resumeRequested === true && !commentBody) {
@@ -7929,7 +7943,9 @@ export function issueRoutes(
       requestedAssigneePatch: {
         assigneeAgentId: normalizedAssigneeAgentId,
         assigneeUserId:
-          req.body.assigneeUserId === undefined ? undefined : (req.body.assigneeUserId as string | null),
+          updateFields.assigneeUserId === undefined
+            ? undefined
+            : (updateFields.assigneeUserId as string | null),
       },
       actor: {
         agentId: actor.agentId ?? null,
@@ -8046,7 +8062,11 @@ export function issueRoutes(
       !!existing.createdByUserId &&
       nextAssigneeUserId === existing.createdByUserId;
 
-    if (assigneeWillChange && !transition.workflowControlledAssignment) {
+    if (
+      assigneeWillChange &&
+      !transition.workflowControlledAssignment &&
+      !implicitlyClaimedByUserId
+    ) {
       if (!isAgentReturningIssueToCreator) {
         await assertCanAssignTasks(req, existing.companyId, {
           issueId: existing.id,
