@@ -27,6 +27,7 @@ export { attentionRoutes } from "./attention.js";
 export { sidebarBadgeRoutes } from "./sidebar-badges.js";
 export { sidebarPreferenceRoutes } from "./sidebar-preferences.js";
 export { resourceMembershipRoutes } from "./resource-memberships.js";
+export { calendarRoutes } from "./calendars.js";
 export { inboxDismissalRoutes } from "./inbox-dismissals.js";
 export { llmRoutes } from "./llms.js";
 export { accessRoutes } from "./access.js";
