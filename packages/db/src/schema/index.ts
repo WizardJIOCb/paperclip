@@ -1,8 +1,16 @@
 export { companies } from "./companies.js";
 export { companyLogos } from "./company_logos.js";
-export { authUsers, authSessions, authAccounts, authVerifications } from "./auth.js";
+export {
+  authUsers,
+  authSessions,
+  authAccounts,
+  authVerifications,
+} from "./auth.js";
 export { instanceSettings } from "./instance_settings.js";
-export { cloudUpstreamConnections, cloudUpstreamRuns } from "./cloud_upstreams.js";
+export {
+  cloudUpstreamConnections,
+  cloudUpstreamRuns,
+} from "./cloud_upstreams.js";
 export { instanceUserRoles } from "./instance_user_roles.js";
 export { userSidebarPreferences } from "./user_sidebar_preferences.js";
 export { agents } from "./agents.js";
@@ -11,7 +19,14 @@ export { agentMemberships } from "./agent_memberships.js";
 export { boardApiKeys } from "./board_api_keys.js";
 export { cliAuthChallenges } from "./cli_auth_challenges.js";
 export { companyMemberships } from "./company_memberships.js";
-export { calendars, calendarMembers, calendarInvitations, calendarEvents, eventReminders } from "./calendars.js";
+export {
+  calendars,
+  calendarMembers,
+  calendarInvitations,
+  calendarEvents,
+  eventReminders,
+  userNotificationPreferences,
+} from "./calendars.js";
 export { companyUserSidebarPreferences } from "./company_user_sidebar_preferences.js";
 export { principalPermissionGrants } from "./principal_permission_grants.js";
 export { companySkillPolicies } from "./company_skill_policies.js";
@@ -47,7 +62,12 @@ export { issueReferenceMentions } from "./issue_reference_mentions.js";
 export { externalObjects } from "./external_objects.js";
 export { externalObjectMentions } from "./external_object_mentions.js";
 export { issueRelations } from "./issue_relations.js";
-export { routines, routineRevisions, routineTriggers, routineRuns } from "./routines.js";
+export {
+  routines,
+  routineRevisions,
+  routineTriggers,
+  routineRuns,
+} from "./routines.js";
 export { pipelines, pipelineStages, pipelineTransitions } from "./pipelines.js";
 export {
   cases,
@@ -150,7 +170,10 @@ export { pluginCompanySettings } from "./plugin_company_settings.js";
 export { pluginManagedResources } from "./plugin_managed_resources.js";
 export { pluginState } from "./plugin_state.js";
 export { pluginEntities } from "./plugin_entities.js";
-export { pluginDatabaseNamespaces, pluginMigrations } from "./plugin_database.js";
+export {
+  pluginDatabaseNamespaces,
+  pluginMigrations,
+} from "./plugin_database.js";
 export { pluginJobs, pluginJobRuns } from "./plugin_jobs.js";
 export { pluginWebhookDeliveries } from "./plugin_webhooks.js";
 export { pluginLogs } from "./plugin_logs.js";

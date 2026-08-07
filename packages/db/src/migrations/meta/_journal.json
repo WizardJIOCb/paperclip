@@ -1366,6 +1366,13 @@
       "when": 1785254401000,
       "tag": "0196_system_issue_board_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 197,
+      "version": "7",
+      "when": 1785254402000,
+      "tag": "0197_shared_calendars",
+      "breakpoints": true
     }
   ]
 }
