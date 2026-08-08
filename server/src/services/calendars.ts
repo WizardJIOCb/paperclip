@@ -15,7 +15,7 @@ import { conflict, forbidden, notFound } from "../errors.js";
 
 const REMINDER_OFFSET_MS = 3 * 60 * 60 * 1000;
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const ACTIVE_DELIVERY_STATUSES = ["pending", "retry", "sending"];
+const ACTIVE_DELIVERY_STATUSES = ["pending", "retry", "sending"] as const;
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
