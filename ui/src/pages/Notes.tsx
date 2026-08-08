@@ -604,27 +604,30 @@ export function Notes() {
           <CardContent className="space-y-4 px-4">
             <div className="space-y-2">
               {calendars.map((calendar) => (
-                <button
+                <div
                   key={calendar.id}
-                  type="button"
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
                     selectedCalendarId === calendar.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
                   )}
-                  onClick={() => setSelectedCalendarId(calendar.id)}
                 >
                   <Checkbox
                     checked={visibleCalendarIds.has(calendar.id)}
                     onCheckedChange={() => toggleCalendar(calendar.id)}
-                    onClick={(event) => event.stopPropagation()}
                     aria-label={`Show ${calendar.name}`}
                   />
-                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: calendar.color }} />
-                  <span className="min-w-0 flex-1 truncate">{calendar.name}</span>
-                  <Badge variant={calendar.memberRole === "creator" ? "default" : "secondary"}>
-                    {calendar.memberRole}
-                  </Badge>
-                </button>
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    onClick={() => setSelectedCalendarId(calendar.id)}
+                  >
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: calendar.color }} />
+                    <span className="min-w-0 flex-1 truncate">{calendar.name}</span>
+                    <Badge variant={calendar.memberRole === "creator" ? "default" : "secondary"}>
+                      {calendar.memberRole}
+                    </Badge>
+                  </button>
+                </div>
               ))}
             </div>
 
