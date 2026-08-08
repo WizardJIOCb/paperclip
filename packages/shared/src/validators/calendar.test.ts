@@ -41,8 +41,10 @@ describe("calendar validators", () => {
     expect(listCalendarEventsQuerySchema.safeParse({ ...base, to: "2028-09-01T00:00:00.000Z" }).success).toBe(false);
   });
 
-  it("only accepts an existing target user id for invitations", () => {
+  it("accepts exactly one invitation target", () => {
     expect(createCalendarInvitationSchema.safeParse({ invitedUserId: "owner-2" }).success).toBe(true);
+    expect(createCalendarInvitationSchema.safeParse({ invitedEmail: "owner@example.com" }).success).toBe(true);
+    expect(createCalendarInvitationSchema.safeParse({ invitedUserId: "owner-2", invitedEmail: "owner@example.com" }).success).toBe(false);
     expect(createCalendarInvitationSchema.safeParse({ email: "external@example.com" }).success).toBe(false);
   });
 });

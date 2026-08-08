@@ -4,10 +4,13 @@ import {
   createCalendarEventSchema,
   createCalendarInvitationSchema,
   createCalendarSchema,
+  deleteCalendarSchema,
   deleteCalendarEventSchema,
   listCalendarEventsQuerySchema,
+  transferCalendarOwnershipSchema,
   updateCalendarEventSchema,
   updateCalendarSchema,
+  updateNotificationPreferencesSchema,
 } from "@paperclipai/shared";
 import { forbidden, unauthorized } from "../errors.js";
 import { validate } from "../middleware/validate.js";
@@ -72,13 +75,31 @@ export function calendarRoutes(db: Db) {
     res.json(updated);
   });
 
-  router.delete("/calendars/:calendarId", async (req, res) => {
+  router.post("/calendars/:calendarId/archive", async (req, res) => {
+    assertBoard(req);
+    const calendar = await svc.get(req.params.calendarId as string, req.actor.userId ?? "local-board");
+    const userId = requireOwner(req, calendar.companyId);
+    const archived = await svc.archive(calendar.id, userId);
+    await audit(req, calendar.companyId, "calendar.archived", "calendar", calendar.id);
+    res.json(archived);
+  });
+
+  router.delete("/calendars/:calendarId", validate(deleteCalendarSchema), async (req, res) => {
     assertBoard(req);
     const calendar = await svc.get(req.params.calendarId as string, req.actor.userId ?? "local-board");
     const userId = requireOwner(req, calendar.companyId);
     await svc.delete(calendar.id, userId);
     await audit(req, calendar.companyId, "calendar.deleted", "calendar", calendar.id);
     res.status(204).end();
+  });
+
+  router.put("/calendars/:calendarId/ownership", validate(transferCalendarOwnershipSchema), async (req, res) => {
+    assertBoard(req);
+    const calendar = await svc.get(req.params.calendarId as string, req.actor.userId ?? "local-board");
+    const userId = requireOwner(req, calendar.companyId);
+    const updated = await svc.transferOwnership(calendar.id, userId, req.body);
+    await audit(req, calendar.companyId, "calendar.ownership_transferred", "calendar", calendar.id);
+    res.json(updated);
   });
 
   router.get("/calendars/:calendarId/members", async (req, res) => {
@@ -99,7 +120,7 @@ export function calendarRoutes(db: Db) {
     assertBoard(req);
     const calendar = await svc.get(req.params.calendarId as string, req.actor.userId ?? "local-board");
     const userId = requireOwner(req, calendar.companyId);
-    const invitation = await svc.createInvitation(calendar.id, userId, req.body.invitedUserId);
+    const invitation = await svc.createInvitation(calendar.id, userId, req.body);
     await audit(req, calendar.companyId, "calendar.invitation_created", "calendar", calendar.id);
     res.status(201).json(invitation);
   });
@@ -169,6 +190,18 @@ export function calendarRoutes(db: Db) {
     await svc.deleteEvent(event.id, userId, req.body.expectedVersion);
     await audit(req, event.companyId, "calendar_event.deleted", "calendar_event", event.id);
     res.status(204).end();
+  });
+
+  router.get("/calendar-notification-preferences", async (req, res) => {
+    assertBoard(req);
+    if (!req.actor.userId) throw unauthorized();
+    res.json(await svc.getNotificationPreferences(req.actor.userId));
+  });
+
+  router.patch("/calendar-notification-preferences", validate(updateNotificationPreferencesSchema), async (req, res) => {
+    assertBoard(req);
+    if (!req.actor.userId) throw unauthorized();
+    res.json(await svc.updateNotificationPreferences(req.actor.userId, req.body));
   });
 
   return router;

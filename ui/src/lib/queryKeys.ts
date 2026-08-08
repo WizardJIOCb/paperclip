@@ -126,6 +126,16 @@ export const queryKeys = {
     summaryRevisions: (id: string) => ["status-cards", "detail", id, "summary-revisions"] as const,
     dryRun: (id: string) => ["status-cards", "detail", id, "dry-run"] as const,
   },
+  calendars: {
+    list: (companyId: string, includeArchived = false) =>
+      ["calendars", companyId, includeArchived ? "archived" : "active"] as const,
+    detail: (calendarId: string) => ["calendars", "detail", calendarId] as const,
+    members: (calendarId: string) => ["calendars", calendarId, "members"] as const,
+    inviteCandidates: (calendarId: string) => ["calendars", calendarId, "invite-candidates"] as const,
+    events: (companyId: string, from: string, to: string, calendarIds: string[]) =>
+      ["calendar-events", companyId, from, to, [...calendarIds].sort().join(",")] as const,
+    notificationPreferences: ["calendar-notification-preferences"] as const,
+  },
   issues: {
     list: (companyId: string) => ["issues", companyId] as const,
     mentionPool: (companyId: string) => ["issues", companyId, "mention-pool"] as const,

@@ -20,6 +20,7 @@ import {
   PanelLeftOpen,
   Pin,
   AppWindow,
+  CalendarDays,
   MessagesSquare,
   GanttChartSquare,
   LayoutGrid,
@@ -254,6 +255,7 @@ export function Sidebar() {
           collapsible={{ open: workOpen, onOpenChange: setWorkOpen }}
         >
           <SidebarNavItem to="/issues" label={t("sidebar.nav.tasks", { defaultValue: "Tasks" })} icon={CircleDot} />
+          <SidebarNavItem to="/notes" label={t("sidebar.nav.notes", { defaultValue: "Notes" })} icon={CalendarDays} />
           {showCases ? (
             <SidebarNavItem
               to="/cases"

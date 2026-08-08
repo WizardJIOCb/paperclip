@@ -112,7 +112,7 @@ export const calendarInvitations = pgTable(
     calendarId: uuid("calendar_id")
       .notNull()
       .references(() => calendars.id, { onDelete: "cascade" }),
-    invitedUserId: text("invited_user_id").notNull(),
+    invitedUserId: text("invited_user_id"),
     invitedEmail: text("invited_email").notNull(),
     invitedByUserId: text("invited_by_user_id").notNull(),
     tokenHash: text("token_hash").notNull(),
@@ -136,6 +136,11 @@ export const calendarInvitations = pgTable(
       "calendar_invitations_calendar_user_pending_uq",
     )
       .on(table.calendarId, table.invitedUserId)
+      .where(sql`invited_user_id is not null and accepted_at is null and revoked_at is null`),
+    calendarEmailPendingUniqueIdx: uniqueIndex(
+      "calendar_invitations_calendar_email_pending_uq",
+    )
+      .on(table.calendarId, table.invitedEmail)
       .where(sql`accepted_at is null and revoked_at is null`),
     invitedUserIdx: index("calendar_invitations_invited_user_idx").on(
       table.invitedUserId,

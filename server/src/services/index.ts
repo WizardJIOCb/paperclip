@@ -151,6 +151,7 @@ export { workProductService } from "./work-products.js";
 export { logActivity, type LogActivityInput } from "./activity-log.js";
 export { calendarService } from "./calendars.js";
 export { calendarReminderService } from "./calendar-reminders.js";
+export { calendarReminderStore } from "./calendar-reminder-store.js";
 export { summarySlotService, SUMMARIZER_BUILT_IN_KEY } from "./summary-slots.js";
 export { notifyHireApproved, type NotifyHireApprovedInput } from "./hire-hook.js";
 export { publishLiveEvent, subscribeCompanyLiveEvents } from "./live-events.js";

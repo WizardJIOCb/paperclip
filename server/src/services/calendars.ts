@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import {
   authUsers,
@@ -9,8 +9,17 @@ import {
   calendars,
   companyMemberships,
   eventReminders,
+  userNotificationPreferences,
 } from "@paperclipai/db";
-import type { CreateCalendar, CreateCalendarEvent, UpdateCalendar, UpdateCalendarEvent } from "@paperclipai/shared";
+import type {
+  CreateCalendar,
+  CreateCalendarEvent,
+  CreateCalendarInvitation,
+  TransferCalendarOwnership,
+  UpdateCalendar,
+  UpdateCalendarEvent,
+  UpdateNotificationPreferences,
+} from "@paperclipai/shared";
 import { conflict, forbidden, notFound } from "../errors.js";
 
 const REMINDER_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -19,6 +28,10 @@ const ACTIVE_DELIVERY_STATUSES = ["pending", "retry", "sending"] as const;
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
 }
 
 function invitationStatus(row: typeof calendarInvitations.$inferSelect) {
@@ -69,6 +82,26 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
       )).then((rows) => rows[0] ?? null);
   }
 
+  async function activeOwnerByEmail(email: string, companyId: string) {
+    return db.select({ id: authUsers.id, name: authUsers.name, email: authUsers.email })
+      .from(companyMemberships)
+      .innerJoin(authUsers, eq(authUsers.id, companyMemberships.principalId))
+      .where(and(
+        eq(companyMemberships.companyId, companyId),
+        eq(companyMemberships.principalType, "user"),
+        sql`lower(${authUsers.email}) = ${normalizeEmail(email)}`,
+        eq(companyMemberships.membershipRole, "owner"),
+        eq(companyMemberships.status, "active"),
+      )).then((rows) => rows[0] ?? null);
+  }
+
+  async function userByEmail(email: string) {
+    return db.select({ id: authUsers.id, name: authUsers.name, email: authUsers.email })
+      .from(authUsers)
+      .where(sql`lower(${authUsers.email}) = ${normalizeEmail(email)}`)
+      .then((rows) => rows[0] ?? null);
+  }
+
   function reminderTime(startsAt: Date) {
     const current = now();
     if (startsAt.getTime() <= current.getTime()) return null;
@@ -105,6 +138,14 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
       scheduledFor,
       nextAttemptAt: scheduledFor,
     }))).onConflictDoNothing();
+  }
+
+  async function cancelCalendarReminders(calendarId: string) {
+    const eventIds = db.select({ id: calendarEvents.id }).from(calendarEvents).where(eq(calendarEvents.calendarId, calendarId));
+    await db.update(eventReminders).set({ status: "cancelled", updatedAt: now() }).where(and(
+      inArray(eventReminders.eventId, eventIds),
+      inArray(eventReminders.status, ACTIVE_DELIVERY_STATUSES),
+    ));
   }
 
   return {
@@ -148,9 +189,48 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
         .then((rows) => ({ ...rows[0]!, memberRole: "creator" as const }));
     },
 
+    async archive(calendarId: string, userId: string) {
+      await requireCreator(calendarId, userId);
+      const archived = await db.update(calendars).set({ status: "archived", updatedAt: now() })
+        .where(eq(calendars.id, calendarId))
+        .returning()
+        .then((rows) => rows[0]!);
+      await cancelCalendarReminders(calendarId);
+      return { ...archived, memberRole: "creator" as const };
+    },
+
     async delete(calendarId: string, userId: string) {
       await requireCreator(calendarId, userId);
       await db.delete(calendars).where(eq(calendars.id, calendarId));
+    },
+
+    async transferOwnership(calendarId: string, userId: string, input: TransferCalendarOwnership) {
+      const { calendar } = await requireCreator(calendarId, userId);
+      if (input.newCreatorUserId === userId) throw conflict("User is already the calendar creator");
+      const target = await activeOwnerUser(input.newCreatorUserId, calendar.companyId);
+      if (!target) throw forbidden("Calendar ownership can only be transferred to an active owner in this company");
+      const targetMember = await db.select({ id: calendarMembers.id }).from(calendarMembers).where(and(
+        eq(calendarMembers.calendarId, calendarId),
+        eq(calendarMembers.userId, input.newCreatorUserId),
+        eq(calendarMembers.status, "active"),
+      )).then((rows) => rows[0] ?? null);
+      if (!targetMember) throw forbidden("New calendar creator must already be an active calendar member");
+
+      return db.transaction(async (tx) => {
+        const updated = await tx.update(calendars).set({
+          creatorUserId: input.newCreatorUserId,
+          updatedAt: now(),
+        }).where(eq(calendars.id, calendarId)).returning().then((rows) => rows[0]!);
+        await tx.update(calendarMembers).set({ role: "member", updatedAt: now() }).where(and(
+          eq(calendarMembers.calendarId, calendarId),
+          eq(calendarMembers.userId, userId),
+        ));
+        await tx.update(calendarMembers).set({ role: "creator", status: "active", updatedAt: now() }).where(and(
+          eq(calendarMembers.calendarId, calendarId),
+          eq(calendarMembers.userId, input.newCreatorUserId),
+        ));
+        return { ...updated, memberRole: "member" as const };
+      });
     },
 
     async listMembers(calendarId: string, userId: string) {
@@ -181,24 +261,33 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
           eq(companyMemberships.principalType, "user"),
           eq(companyMemberships.membershipRole, "owner"),
           eq(companyMemberships.status, "active"),
-          sql`${companyMemberships.principalId} not in (${activeMemberIds})`,
+          notInArray(companyMemberships.principalId, activeMemberIds),
         )).orderBy(asc(authUsers.name));
     },
 
-    async createInvitation(calendarId: string, userId: string, invitedUserId: string) {
+    async createInvitation(calendarId: string, userId: string, input: CreateCalendarInvitation) {
       const { calendar } = await requireCreator(calendarId, userId);
-      const target = await activeOwnerUser(invitedUserId, calendar.companyId);
-      if (!target) throw forbidden("Only active owners from the same company can be invited");
-      const existingMember = await db.select({ status: calendarMembers.status }).from(calendarMembers)
-        .where(and(eq(calendarMembers.calendarId, calendarId), eq(calendarMembers.userId, invitedUserId)))
-        .then((rows) => rows[0] ?? null);
-      if (existingMember?.status === "active") throw conflict("User is already a calendar participant");
+      const target = input.invitedUserId
+        ? await activeOwnerUser(input.invitedUserId, calendar.companyId)
+        : await activeOwnerByEmail(input.invitedEmail!, calendar.companyId);
+      if (input.invitedUserId && !target) throw forbidden("Only active owners from the same company can be invited");
+      if (input.invitedEmail && !target && await userByEmail(input.invitedEmail)) {
+        throw forbidden("Only active owners from the same company can be invited");
+      }
+      const invitedUserId = target?.id ?? input.invitedUserId ?? null;
+      const invitedEmail = normalizeEmail(target?.email ?? input.invitedEmail!);
+      if (invitedUserId) {
+        const existingMember = await db.select({ status: calendarMembers.status }).from(calendarMembers)
+          .where(and(eq(calendarMembers.calendarId, calendarId), eq(calendarMembers.userId, invitedUserId)))
+          .then((rows) => rows[0] ?? null);
+        if (existingMember?.status === "active") throw conflict("User is already a calendar participant");
+      }
       const inviteToken = randomBytes(32).toString("base64url");
       const values = {
         companyId: calendar.companyId,
         calendarId,
         invitedUserId,
-        invitedEmail: target.email.trim().toLowerCase(),
+        invitedEmail,
         invitedByUserId: userId,
         tokenHash: hashToken(inviteToken),
         expiresAt: new Date(now().getTime() + INVITATION_TTL_MS),
@@ -206,10 +295,20 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
         revokedAt: null,
         updatedAt: now(),
       };
-      const invitation = await db.insert(calendarInvitations).values(values).onConflictDoUpdate({
-        target: [calendarInvitations.calendarId, calendarInvitations.invitedUserId],
-        set: values,
-      }).returning().then((rows) => rows[0]!);
+      const pendingConditions = [
+        eq(calendarInvitations.calendarId, calendarId),
+        isNull(calendarInvitations.acceptedAt),
+        isNull(calendarInvitations.revokedAt),
+        invitedUserId
+          ? eq(calendarInvitations.invitedUserId, invitedUserId)
+          : eq(calendarInvitations.invitedEmail, invitedEmail),
+      ];
+      const pending = await db.select({ id: calendarInvitations.id }).from(calendarInvitations)
+        .where(and(...pendingConditions))
+        .then((rows) => rows[0] ?? null);
+      const invitation = pending
+        ? await db.update(calendarInvitations).set(values).where(eq(calendarInvitations.id, pending.id)).returning().then((rows) => rows[0]!)
+        : await db.insert(calendarInvitations).values(values).returning().then((rows) => rows[0]!);
       return { ...invitation, status: invitationStatus(invitation), inviteToken };
     },
 
@@ -221,12 +320,13 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
         if (!invitation) throw notFound("Calendar invitation not found");
         if (invitation.acceptedAt) throw conflict("Calendar invitation has already been accepted");
         if (invitation.revokedAt || invitation.expiresAt.getTime() <= now().getTime()) throw forbidden("Calendar invitation is no longer active");
-        if (invitation.invitedUserId !== userId || invitation.invitedEmail !== userEmail?.trim().toLowerCase()) {
+        const normalizedActorEmail = userEmail ? normalizeEmail(userEmail) : null;
+        if ((invitation.invitedUserId && invitation.invitedUserId !== userId) || invitation.invitedEmail !== normalizedActorEmail) {
           throw forbidden("Calendar invitation belongs to another user");
         }
         const owner = await activeOwnerUser(userId, invitation.companyId);
         if (!owner) throw forbidden("Only an active owner from this company can accept the invitation");
-        const accepted = await tx.update(calendarInvitations).set({ acceptedAt: now(), updatedAt: now() }).where(and(
+        const accepted = await tx.update(calendarInvitations).set({ invitedUserId: userId, acceptedAt: now(), updatedAt: now() }).where(and(
           eq(calendarInvitations.id, invitation.id),
           isNull(calendarInvitations.acceptedAt),
           isNull(calendarInvitations.revokedAt),
@@ -291,6 +391,7 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
     async listEvents(companyId: string, userId: string, from: Date, to: Date, calendarIds?: string[]) {
       const conditions = [
         eq(calendarEvents.companyId, companyId),
+        eq(calendars.status, "active"),
         eq(calendarMembers.userId, userId),
         eq(calendarMembers.status, "active"),
         lt(calendarEvents.startsAt, to),
@@ -299,6 +400,7 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
       if (calendarIds?.length) conditions.push(inArray(calendarEvents.calendarId, calendarIds));
       return db.select({ event: calendarEvents, authorName: authUsers.name })
         .from(calendarEvents)
+        .innerJoin(calendars, eq(calendars.id, calendarEvents.calendarId))
         .innerJoin(calendarMembers, eq(calendarMembers.calendarId, calendarEvents.calendarId))
         .leftJoin(authUsers, eq(authUsers.id, calendarEvents.authorUserId))
         .where(and(...conditions)).orderBy(asc(calendarEvents.startsAt))
@@ -307,6 +409,7 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
 
     async createEvent(calendarId: string, userId: string, input: CreateCalendarEvent) {
       const { calendar } = await requireMembership(calendarId, userId);
+      if (calendar.status !== "active") throw conflict("Archived calendars cannot be changed");
       const event = await db.insert(calendarEvents).values({
         companyId: calendar.companyId,
         calendarId,
@@ -331,10 +434,12 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
 
     async updateEvent(eventId: string, userId: string, input: UpdateCalendarEvent) {
       const current = await this.getEvent(eventId, userId);
+      const { calendar } = await requireMembership(current.calendarId, userId);
+      if (calendar.status !== "active") throw conflict("Archived calendars cannot be changed");
       const scheduleChanged = input.startsAt !== undefined && new Date(input.startsAt).getTime() !== current.startsAt.getTime();
       const startsAt = input.startsAt ? new Date(input.startsAt) : current.startsAt;
       const endsAt = input.endsAt === undefined ? current.endsAt : input.endsAt ? new Date(input.endsAt) : null;
-      if (endsAt && endsAt.getTime() < startsAt.getTime()) throw conflict("Event end must not be before its start");
+      if (endsAt && endsAt.getTime() <= startsAt.getTime()) throw conflict("Event end must be after its start");
       const rows = await db.update(calendarEvents).set({
         ...(input.title === undefined ? {} : { title: input.title }),
         ...(input.note === undefined ? {} : { note: input.note }),
@@ -351,12 +456,45 @@ export function calendarService(db: Db, deps: { now?: () => Date } = {}) {
     },
 
     async deleteEvent(eventId: string, userId: string, expectedVersion: number) {
-      await this.getEvent(eventId, userId);
+      const current = await this.getEvent(eventId, userId);
+      const { calendar } = await requireMembership(current.calendarId, userId);
+      if (calendar.status !== "active") throw conflict("Archived calendars cannot be changed");
       const deleted = await db.delete(calendarEvents).where(and(
         eq(calendarEvents.id, eventId),
         eq(calendarEvents.version, expectedVersion),
       )).returning({ id: calendarEvents.id });
       if (!deleted[0]) throw conflict("This event was changed by another participant. Refresh and try again.");
+    },
+
+    async getNotificationPreferences(userId: string) {
+      const row = await db.select().from(userNotificationPreferences)
+        .where(eq(userNotificationPreferences.userId, userId))
+        .then((rows) => rows[0] ?? null);
+      return {
+        timezone: row?.timezone ?? "UTC",
+        eventRemindersEnabled: row?.eventRemindersEnabled ?? true,
+      };
+    },
+
+    async updateNotificationPreferences(userId: string, input: UpdateNotificationPreferences) {
+      const values = {
+        userId,
+        timezone: input.timezone ?? "UTC",
+        eventRemindersEnabled: input.eventRemindersEnabled ?? true,
+        updatedAt: now(),
+      };
+      const saved = await db.insert(userNotificationPreferences).values(values).onConflictDoUpdate({
+        target: userNotificationPreferences.userId,
+        set: {
+          ...(input.timezone === undefined ? {} : { timezone: input.timezone }),
+          ...(input.eventRemindersEnabled === undefined ? {} : { eventRemindersEnabled: input.eventRemindersEnabled }),
+          updatedAt: now(),
+        },
+      }).returning().then((rows) => rows[0]!);
+      return {
+        timezone: saved.timezone,
+        eventRemindersEnabled: saved.eventRemindersEnabled,
+      };
     },
   };
 }

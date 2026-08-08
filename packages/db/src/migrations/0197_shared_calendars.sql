@@ -28,7 +28,7 @@ CREATE TABLE "calendar_invitations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"company_id" uuid NOT NULL,
 	"calendar_id" uuid NOT NULL,
-	"invited_user_id" text NOT NULL,
+	"invited_user_id" text,
 	"invited_email" text NOT NULL,
 	"invited_by_user_id" text NOT NULL,
 	"token_hash" text NOT NULL,
@@ -112,7 +112,9 @@ CREATE INDEX "calendar_members_calendar_status_idx" ON "calendar_members" USING 
 --> statement-breakpoint
 CREATE UNIQUE INDEX "calendar_invitations_token_hash_unique_idx" ON "calendar_invitations" USING btree ("token_hash");
 --> statement-breakpoint
-CREATE UNIQUE INDEX "calendar_invitations_calendar_user_pending_uq" ON "calendar_invitations" USING btree ("calendar_id","invited_user_id") WHERE accepted_at is null and revoked_at is null;
+CREATE UNIQUE INDEX "calendar_invitations_calendar_user_pending_uq" ON "calendar_invitations" USING btree ("calendar_id","invited_user_id") WHERE invited_user_id is not null and accepted_at is null and revoked_at is null;
+--> statement-breakpoint
+CREATE UNIQUE INDEX "calendar_invitations_calendar_email_pending_uq" ON "calendar_invitations" USING btree ("calendar_id","invited_email") WHERE accepted_at is null and revoked_at is null;
 --> statement-breakpoint
 CREATE INDEX "calendar_invitations_invited_user_idx" ON "calendar_invitations" USING btree ("invited_user_id","expires_at");
 --> statement-breakpoint
