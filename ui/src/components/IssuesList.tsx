@@ -160,6 +160,24 @@ export type IssueViewState = IssueFilterState & {
   boardColumnPageSize: BoardColumnPageSize;
 };
 
+export function buildKanbanIssueUpdate(
+  issue: Issue | undefined,
+  currentUserId: string | null,
+  data: Record<string, unknown>,
+): Record<string, unknown> {
+  const movesUnassignedIssueIntoProgress =
+    data.status === "in_progress"
+    && issue
+    && !issue.assigneeAgentId
+    && !issue.assigneeUserId
+    && currentUserId;
+
+  return {
+    ...data,
+    ...(movesUnassignedIssueIntoProgress ? { assigneeUserId: currentUserId } : {}),
+  };
+}
+
 const defaultViewState: IssueViewState = {
   ...defaultIssueFilterState,
   sortField: "updated",
@@ -702,6 +720,15 @@ export function IssuesList({
   const experimentalSettingsLoaded = experimentalSettings !== undefined;
   const isolatedWorkspacesEnabled = experimentalSettings?.enableIsolatedWorkspaces === true;
   const externalObjectsEnabled = experimentalSettings?.enableExternalObjects === true;
+
+  const handleKanbanIssueUpdate = useCallback((id: string, data: Record<string, unknown>) => {
+    const issue = issues.find((candidate) => candidate.id === id);
+
+    // A task in progress must have exactly one owner. Dragging a task into the
+    // workflow's in-progress lane means the board user is taking that work on,
+    // so make the status and ownership update atomically.
+    onUpdateIssue(id, buildKanbanIssueUpdate(issue, currentUserId, data));
+  }, [currentUserId, issues, onUpdateIssue]);
 
   // Scope the storage key per company so folding/view state is independent across companies.
   const scopedKey = selectedCompanyId ? `${viewStateKey}:${selectedCompanyId}` : viewStateKey;
@@ -1888,7 +1915,7 @@ export function IssuesList({
           collapsedStatuses={boardCollapsedStatuses}
           initialVisibleCount={viewState.boardColumnPageSize}
           revealIncrement={viewState.boardColumnPageSize}
-          onUpdateIssue={onUpdateIssue}
+          onUpdateIssue={handleKanbanIssueUpdate}
           onManageColumns={() => setBoardColumnManagerOpen(true)}
         />
       ) : (

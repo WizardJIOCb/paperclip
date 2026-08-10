@@ -221,6 +221,16 @@ describe("KanbanBoard", () => {
     expect(container.textContent).toContain("Live");
   });
 
+  it("keeps touch gestures on cards available for drag-and-drop", () => {
+    const { container } = renderBoard({
+      issues: createIssues(1, "todo"),
+    });
+
+    const card = container.querySelector('a[href="/issues/PAP-1"]')?.parentElement;
+
+    expect(card?.className).toContain("touch-none");
+  });
+
   it("resolves drop targets from status rails and cards", () => {
     const issues = [
       createIssue(1, "todo"),

@@ -3,7 +3,8 @@ import { Link } from "@/lib/router";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -344,7 +345,10 @@ function KanbanCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "block cursor-grab active:cursor-grabbing transition-shadow",
+        // Prevent the browser from turning a long press into a page gesture
+        // before dnd-kit receives it. The board itself remains horizontally
+        // scrollable between cards on touch devices.
+        "block cursor-grab touch-none active:cursor-grabbing transition-shadow",
         isDragging && !isOverlay ? "opacity-30" : "",
         isOverlay ? "shadow-lg ring-1 ring-primary/20" : "hover:shadow-sm",
         compact ? "p-2" : "p-2.5",
@@ -436,7 +440,10 @@ export function KanbanBoard({
   const collapsedStatusSet = useMemo(() => new Set(collapsedStatuses), [collapsedStatuses]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 6 },
+    }),
   );
 
   const lanes = useMemo<KanbanLane[]>(() => {

@@ -7,6 +7,7 @@ import { projectsApi } from "../api/projects";
 import { heartbeatsApi } from "../api/heartbeats";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
+import { useToastActions } from "../context/ToastContext";
 import { collectLiveIssueIds } from "../lib/liveIssueIds";
 import { usePublishSharedQueryData, useSharedPollingQuery } from "@/hooks/useSharedPolling";
 import { queryKeys } from "../lib/queryKeys";
@@ -58,6 +59,7 @@ export function buildIssuesSearchUrl(currentHref: string, search: string): strin
 
 export function Issues() {
   const { selectedCompanyId } = useCompany();
+  const { pushToast } = useToastActions();
   const { setBreadcrumbs } = useBreadcrumbs();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -184,6 +186,12 @@ export function Issues() {
       issuesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId!) });
+    },
+    onError: (error) => {
+      pushToast({
+        title: error instanceof Error ? error.message : "Failed to update task",
+        tone: "error",
+      });
     },
   });
 

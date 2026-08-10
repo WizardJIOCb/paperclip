@@ -6,7 +6,7 @@ import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Issue, Project } from "@paperclipai/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { IssuesList } from "./IssuesList";
+import { buildKanbanIssueUpdate, IssuesList } from "./IssuesList";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const companyState = vi.hoisted(() => ({
@@ -165,6 +165,7 @@ vi.mock("./KanbanBoard", () => ({
     collapsedStatuses?: string[];
     initialVisibleCount?: number;
     revealIncrement?: number;
+    onUpdateIssue: (id: string, data: Record<string, unknown>) => void;
   }) => {
     mockKanbanBoard(props);
     return (
@@ -409,6 +410,17 @@ describe("IssuesList", () => {
 
     act(() => {
       root.unmount();
+    });
+  });
+
+  it("assigns the current board user when drag-and-drop starts an unassigned task", () => {
+    expect(buildKanbanIssueUpdate(createIssue(), "user-1", {
+      status: "in_progress",
+      boardColumnId: null,
+    })).toEqual({
+      status: "in_progress",
+      boardColumnId: null,
+      assigneeUserId: "user-1",
     });
   });
 
