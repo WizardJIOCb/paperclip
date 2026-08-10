@@ -2154,6 +2154,7 @@ function toCompactIssue(issue: any): CompactIssue {
     title: issue.title,
     description: issue.description,
     status: issue.status,
+    boardColumnId: issue.boardColumnId,
     workMode: issue.workMode,
     priority: issue.priority,
     assigneeAgentId: issue.assigneeAgentId,

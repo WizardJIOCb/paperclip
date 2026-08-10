@@ -179,6 +179,7 @@ describeEmbeddedPostgres("issue list routes assigneeAgentId filter", () => {
       title: "Compact issue",
       description: "This long detail belongs on the issue detail endpoint, not the board list.",
       status: "todo",
+      boardColumnId: null,
       priority: "medium",
       billingCode: "product",
     });
